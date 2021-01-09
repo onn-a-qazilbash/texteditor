@@ -6,11 +6,19 @@
 #include <termios.h> /* struct termios, tcgetattr(), tcsetattr, ECHO, TCSAFLUSH, ISIG, IXON, IEXTEN, ICRNL, OPOST */
 #include <stdlib.h>  /* atexit(), exit() */
 
+/* DEFINES */
+#define CTRL_KEY(k) ((k) & 0x1f)
+
+
 /* DATA */
 struct termios original_termios;
 
 /* TERMINAL */
 void die(const char * s) {
+    // Clear the screen and reposition cursor
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    write(STDOUT_FILENO, "\x1b[H", 3);
+
     perror(s);
     exit(1);
 }
@@ -45,25 +53,44 @@ void enableRawMode(){
     }
 }
 
+char editorReadKey(){
+    int nread;
+    char c;
+    while ( (nread = read(STDIN_FILENO, &c, 1)) != 1 ){
+        if (nread == -1 && errno != EAGAIN) {
+            die("read");
+        }
+    }
+    return c;
+}
+/* OUPUT  */
+void editorRefreshScreen(){
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    write(STDOUT_FILENO, "\x1b[H", 3);
+}
+
+
+/* INPUT */
+void editorProcessKeypress(){
+    char c  = editorReadKey();
+
+    switch(c){
+        case CTRL_KEY('q'):
+            write(STDOUT_FILENO, "\x1b[2J", 4);
+            write(STDOUT_FILENO, "\x1b[H", 3);
+            exit(0);
+            break;
+    }
+}
+
 /* INIT */
 
 int main(){
     enableRawMode();
     
     while (1){  
-        char c = '\0';
-        if (read( STDIN_FILENO, &c, 1  ) == -1 && errno != EAGAIN){
-            die("read");
-        }
-        if ( iscntrl(c)  ){
-                printf("%d\r\n", c); /* Print ASCII code of char */
-        }
-        else{
-                printf("%d ('%c')\r\n", c, c); /* Print ASCII code and actual character */
-        }
-        if ( c == 'q' ){
-            break;
-        }
+        editorRefreshScreen();
+        editorProcessKeypress();
     }
     return 0;
 }
