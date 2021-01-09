@@ -27,20 +27,26 @@ void enableRawMode(){
     /* Set 8 bits per byte, if not already. */
     raw.c_iflag &= (CS8);
     raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+    raw.c_cc[VMIN] = 0; /* number of bytes before read returns */ 
+    raw.c_cc[VTIME] = 1; /* seconds before timeout (1/10 of a second) */
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
 
 int main(){
     enableRawMode();
-
-    char c;
-    while ( read(STDIN_FILENO, &c, 1) == 1  && c != 'q'){
+    
+    while (1){  
+        char c = '\0';
+        read( STDIN_FILENO, &c, 1  );
         if ( iscntrl(c)  ){
-            printf("%d\r\n", c); /* Print ASCII code of char */
+                printf("%d\r\n", c); /* Print ASCII code of char */
         }
         else{
-            printf("%d ('%c')\r\n", c, c); /* Print ASCII code and actual character */
+                printf("%d ('%c')\r\n", c, c); /* Print ASCII code and actual character */
+        }
+        if ( c == 'q' ){
+            break;
         }
     }
     return 0;
