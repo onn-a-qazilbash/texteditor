@@ -1,13 +1,23 @@
 #include <ctype.h>   /* iscntrl() */
-#include <stdio.h>   /* printf() */
+#include <errno.h>   /* errno, EAGAIN */
+#include <stdio.h>   /* printf(), perror() */
 #include <unistd.h>  /* read(), STDIN_FILENO */
 #include <termios.h> /* struct termios, tcgetattr(), tcsetattr, ECHO, TCSAFLUSH, ISIG, IXON, IEXTEN, ICRNL, OPOST */
-#include <stdlib.h>  /* atexit() */
+#include <stdlib.h>  /* atexit(), exit() */
 
 struct termios original_termios;
 
+
+void die(const char * s) {
+    perror(s);
+    exit(1);
+}
+
+
 void disableRawMode(){
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios);
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios) == -1){
+        die("tcsetattr");
+    }
 }
 
 
@@ -17,7 +27,9 @@ void enableRawMode(){
      * in the struct terminos. We then flip the ECHO bit to 0.
      * We then store the modified sturct back in memory. 
      * */
-    tcgetattr(STDIN_FILENO, &original_termios);
+    if (tcgetattr(STDIN_FILENO, &original_termios) == -1){
+        die("tcgetattr");
+    }
     atexit(disableRawMode);
     struct termios raw = original_termios;
 
@@ -29,7 +41,9 @@ void enableRawMode(){
     raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
     raw.c_cc[VMIN] = 0; /* number of bytes before read returns */ 
     raw.c_cc[VTIME] = 1; /* seconds before timeout (1/10 of a second) */
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1){
+        die("tcsetattr");
+    }
 }
 
 
@@ -38,7 +52,9 @@ int main(){
     
     while (1){  
         char c = '\0';
-        read( STDIN_FILENO, &c, 1  );
+        if (read( STDIN_FILENO, &c, 1  ) == -1 && errno != EAGAIN){
+            die("read");
+        }
         if ( iscntrl(c)  ){
                 printf("%d\r\n", c); /* Print ASCII code of char */
         }
