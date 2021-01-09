@@ -1,3 +1,4 @@
+/* INCLUDES  */
 #include <ctype.h>   /* iscntrl() */
 #include <errno.h>   /* errno, EAGAIN */
 #include <stdio.h>   /* printf(), perror() */
@@ -5,21 +6,20 @@
 #include <termios.h> /* struct termios, tcgetattr(), tcsetattr, ECHO, TCSAFLUSH, ISIG, IXON, IEXTEN, ICRNL, OPOST */
 #include <stdlib.h>  /* atexit(), exit() */
 
+/* DATA */
 struct termios original_termios;
 
-
+/* TERMINAL */
 void die(const char * s) {
     perror(s);
     exit(1);
 }
-
 
 void disableRawMode(){
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &original_termios) == -1){
         die("tcsetattr");
     }
 }
-
 
 void enableRawMode(){
     /* Switching terminal from canonical  mode to raw mode.
@@ -31,9 +31,8 @@ void enableRawMode(){
         die("tcgetattr");
     }
     atexit(disableRawMode);
+
     struct termios raw = original_termios;
-
-
     raw.c_iflag &= ~(BRKINT | INPCK | ISTRIP | ICRNL | IXON);
     raw.c_iflag &= ~(OPOST);
     /* Set 8 bits per byte, if not already. */
@@ -46,6 +45,7 @@ void enableRawMode(){
     }
 }
 
+/* INIT */
 
 int main(){
     enableRawMode();
