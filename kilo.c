@@ -3,6 +3,7 @@
 #include <errno.h>   /* errno, EAGAIN */
 #include <stdio.h>   /* printf(), perror() */
 #include <stdlib.h>  /* atexit(), exit() */
+#include <string.h>  /* memcpy() */
 #include <sys/ioctl.h>
 #include <termios.h> /* struct termios, tcgetattr(), tcsetattr, ECHO, TCSAFLUSH, ISIG, IXON, IEXTEN, ICRNL, OPOST */
 #include <unistd.h>  /* read(), STDIN_FILENO */
@@ -108,23 +109,50 @@ int getWindowSize(int * rows, int * cols){
     }
 }
 
+/* APPEND BUFFER */
+struct abuf{
+    char * b;
+    int len;
+};
+
+#define ABUF_INIT {NULL, 0}
+
+void abAppend(struct abuf * ab, const char * s, int len){
+    char * new = realloc(ab->b, ab->len + len);
+
+    if (new == NULL){
+        return;
+    }
+    memcpy(&new[ab->len], s, len);
+    ab->b = new;
+    ab->len += len;
+}
+
+void abFree(struct abuf * ab){
+    free(ab->b);
+}
 
 /* OUTPUT  */
 
-void editorDrawRows(){
+void editorDrawRows(struct abuf * ab){
     for (int y = 0; y < E.screenrows; y++){
-        write(STDOUT_FILENO, "~", 1);
+        abAppend(ab, "~", 1);
         if (y < E.screenrows - 1) {
-            write(STDOUT_FILENO, "\r\n", 2);
+            abAppend(ab, "\r\n", 2);
         }
     }
 }
 
 void editorRefreshScreen(){
-    write(STDOUT_FILENO, "\x1b[2J", 4);
-    write(STDOUT_FILENO, "\x1b[H", 3);
-    editorDrawRows();
-    write(STDOUT_FILENO, "\x1b[H", 3);
+    struct abuf ab = ABUF_INIT;
+
+    abAppend(&ab, "\x1b[2J", 4);
+    abAppend(&ab, "\x1b[H", 3);
+    editorDrawRows(&ab);
+    abAppend(&ab, "\x1b[H", 3);
+
+    write(STDOUT_FILENO, ab.b, ab.len);
+    abFree(&ab);
 }
 
 
