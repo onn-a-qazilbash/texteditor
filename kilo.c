@@ -1,4 +1,9 @@
 /* INCLUDES  */
+/* Feature test macros for getline() to make code portable */
+#define _DEFAULT_SOURCE
+#define _BSD_SOURCE
+#define _GNU_SOURCE
+
 #include <ctype.h>   /* iscntrl() */
 #include <errno.h>   /* errno, EAGAIN */
 #include <stdio.h>   /* printf(), perror() */
@@ -188,7 +193,7 @@ void editorOpen(char * filename){
         die("fopen");
     }
     char * line = NULL;
-    ssize_t linecap = 0;
+    size_t linecap = 0;
     ssize_t linelen;
 
     linelen = getline(&line,&linecap, fp);
@@ -237,7 +242,7 @@ void editorDrawRows(struct abuf * ab){
     for (int y = 0; y < E.screenrows; y++){
         if (y >= E.numrows){
             /* If writing rows with no content, print ~ or terminal name */
-            if (y == E.screenrows / 4){
+            if (E.numrows == 0 && y == E.screenrows / 4){
                 char welcome[80];
                 int welcomelen = snprintf(welcome, sizeof(welcome),
                         "KILO EDITOR - Version %s", KILO_VERSION);
