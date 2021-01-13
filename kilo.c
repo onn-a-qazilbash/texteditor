@@ -5,6 +5,7 @@
 #include <stdlib.h>  /* atexit(), exit() */
 #include <string.h>  /* memcpy() */
 #include <sys/ioctl.h>
+#include <sys/types.h> /* ssize_t */
 #include <termios.h> /* struct termios, tcgetattr(), tcsetattr, ECHO, TCSAFLUSH, ISIG, IXON, IEXTEN, ICRNL, OPOST */
 #include <unistd.h>  /* read(), STDIN_FILENO */
 
@@ -32,9 +33,11 @@ typedef struct erow {
 } erow;
 
 struct editorConfig {
+    /* global variables for cursor positioning / termianl state */
     int cx, cy;
     int screenrows;
     int screencols;
+    /* global variables for text state */
     int numrows;
     erow row;
     struct termios original_termios;
@@ -178,6 +181,19 @@ int getWindowSize(int * rows, int * cols){
     }
 }
 
+/* FILE I/O */
+void editorOpen(){
+    char * line = "Hello, world!";
+    ssize_t linelen = 13;
+
+    E.row.size = linelen;
+    E.row.chars = malloc(linelen + 1);
+    memcpy(E.row.chars, line, linelen);
+    E.row.chars[linelen] = '\0';
+    E.numrows = 1;
+
+}
+
 /* APPEND BUFFER */
 struct abuf{
     char * b;
@@ -205,26 +221,33 @@ void abFree(struct abuf * ab){
 
 void editorDrawRows(struct abuf * ab){
     for (int y = 0; y < E.screenrows; y++){
-        if (y == E.screenrows / 4){
-            char welcome[80];
-            int welcomelen = snprintf(welcome, sizeof(welcome),
-                    "KILO EDITOR - Version %s", KILO_VERSION);
-            if (welcomelen > E.screencols){
-                welcomelen = E.screencols;
+        if (y >= E.numrows){
+            if (y == E.screenrows / 4){
+                char welcome[80];
+                int welcomelen = snprintf(welcome, sizeof(welcome),
+                        "KILO EDITOR - Version %s", KILO_VERSION);
+                if (welcomelen > E.screencols){
+                    welcomelen = E.screencols;
+                }
+                int padding = (E.screencols - welcomelen) / 2;
+                if (padding){
+                    abAppend(ab, "~", 1);
+                    padding--;
+                }
+                while (padding){
+                    abAppend(ab, " ", 1);
+                    padding--;
+                }
+                abAppend(ab, welcome, welcomelen); 
             }
-            int padding = (E.screencols - welcomelen) / 2;
-            if (padding){
+            else{
                 abAppend(ab, "~", 1);
-                padding--;
             }
-            while (padding){
-                abAppend(ab, " ", 1);
-                padding--;
-            }
-            abAppend(ab, welcome, welcomelen); 
         }
         else{
-            abAppend(ab, "~", 1);
+            int len = E.row.size;
+            if (len >= E.screencols) len = E.screencols;
+            abAppend(ab, E.row.chars, len);
         }
         /* Clear contents of line after cursor */
         abAppend(ab, "\x1b[K", 3);
@@ -333,6 +356,7 @@ void initEditor(){
 int main(){
     enableRawMode();
     initEditor(); 
+    editorOpen();
     while (1){  
         editorRefreshScreen();
         editorProcessKeypress();
