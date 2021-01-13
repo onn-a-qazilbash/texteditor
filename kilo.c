@@ -182,15 +182,29 @@ int getWindowSize(int * rows, int * cols){
 }
 
 /* FILE I/O */
-void editorOpen(){
-    char * line = "Hello, world!";
-    ssize_t linelen = 13;
+void editorOpen(char * filename){
+    FILE * fp = fopen(filename, "r");
+    if (fp == NULL){
+        die("fopen");
+    }
+    char * line = NULL;
+    ssize_t linecap = 0;
+    ssize_t linelen;
 
+    linelen = getline(&line,&linecap, fp);
+    /* Strip of trailing newline chars */
+    if (linelen != -1){
+        while (linelen > 0 && (line[linelen - 1] == '\n' || line[linelen - 1] == '\r')){
+            linelen--;
+        }
     E.row.size = linelen;
     E.row.chars = malloc(linelen + 1);
     memcpy(E.row.chars, line, linelen);
     E.row.chars[linelen] = '\0';
     E.numrows = 1;
+    }
+    free(line);
+    fclose(fp);
 
 }
 
@@ -222,6 +236,7 @@ void abFree(struct abuf * ab){
 void editorDrawRows(struct abuf * ab){
     for (int y = 0; y < E.screenrows; y++){
         if (y >= E.numrows){
+            /* If writing rows with no content, print ~ or terminal name */
             if (y == E.screenrows / 4){
                 char welcome[80];
                 int welcomelen = snprintf(welcome, sizeof(welcome),
@@ -244,6 +259,7 @@ void editorDrawRows(struct abuf * ab){
                 abAppend(ab, "~", 1);
             }
         }
+        /* Printing file contents */
         else{
             int len = E.row.size;
             if (len >= E.screencols) len = E.screencols;
@@ -353,10 +369,12 @@ void initEditor(){
     } 
 }
 
-int main(){
+int main(int argc, char * argv[]){
     enableRawMode();
     initEditor(); 
-    editorOpen();
+    if (argc >= 2){
+        editorOpen(argv[1]);
+    }
     while (1){  
         editorRefreshScreen();
         editorProcessKeypress();
