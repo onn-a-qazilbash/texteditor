@@ -308,7 +308,7 @@ void editorRefreshScreen(){
 
     char buffer[32];
     /* H command moves the cursor to specified location */
-    snprintf(buffer, sizeof(buffer), "\x1b[%d;%dH", E.cy + 1, E.cx + 1); 
+    snprintf(buffer, sizeof(buffer), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1, E.cx + 1); 
     abAppend(&ab, buffer, strlen(buffer));
     abAppend(&ab, "\x1b[?25h", 6);
 
