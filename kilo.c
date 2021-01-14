@@ -40,6 +40,7 @@ typedef struct erow {
 struct editorConfig {
     /* global variables for cursor positioning / termianl state */
     int cx, cy;
+    int rowoff;
     int screenrows;
     int screencols;
     /* global variables for text state */
@@ -186,6 +187,8 @@ int getWindowSize(int * rows, int * cols){
     }
 }
 
+/* ROW OPERATIONS */
+
 void editorAppendRow(char * s, size_t len){
     E.row = realloc(E.row, sizeof(erow) * (E.numrows + 1));
                 
@@ -243,9 +246,19 @@ void abFree(struct abuf * ab){
 }
 
 /* OUTPUT  */
+void editorScroll(){
+    if (E.cy < E.rowoff){
+        E.rowoff = E.cy;
+    }
+    if (E.cy >= E.rowoff + E.screenrows){
+        E.rowoff = E.cy - E.screenrows + 1;
+    }
+}
+
 
 void editorDrawRows(struct abuf * ab){
     for (int y = 0; y < E.screenrows; y++){
+        int filerow = y + E.rowoff;
         if (y >= E.numrows){
             /* If writing rows with no content, print ~ or terminal name */
             if (E.numrows == 0 && y == E.screenrows / 4){
@@ -272,9 +285,9 @@ void editorDrawRows(struct abuf * ab){
         }
         /* Printing file contents */
         else{
-            int len = E.row[y].size; 
+            int len = E.row[filerow].size; 
             if (len >= E.screencols) len = E.screencols;
-            abAppend(ab, E.row[y].chars, len);
+            abAppend(ab, E.row[filerow].chars, len);
         }
         /* Clear contents of line after cursor */
         abAppend(ab, "\x1b[K", 3);
@@ -285,6 +298,7 @@ void editorDrawRows(struct abuf * ab){
 }
 
 void editorRefreshScreen(){
+    editorScroll();
     struct abuf ab = ABUF_INIT;
 
     abAppend(&ab, "\x1b[?25l", 6);
@@ -322,7 +336,7 @@ void editorMoveCursor(int key){
             }
             break;
         case ARROW_DOWN:
-            if (E.cy != E.screenrows - 1){
+            if (E.cy < E.numrows){ 
                  E.cy++;
             }
             break;
@@ -373,6 +387,7 @@ void editorProcessKeypress(){
 void initEditor(){
     E.cx = 0;
     E.cy = 0;
+    E.rowoff = 0;
     E.numrows = 0;
     E.row = NULL;
     
