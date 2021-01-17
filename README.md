@@ -3,6 +3,6 @@
 
 ## Setting it Up:
     - Clone this repository.
-    - run ```make```.
+    - run `make`.
     - You can supply a file name.
     
