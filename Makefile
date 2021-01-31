@@ -1,3 +1,10 @@
-FLAGS = -std=c99 -Werror -pedantic -Wall -Wextra -ftrapv -ggdb3 
+CFLAGS = -std=c99 -Werror -pedantic -Wall -Wextra -ftrapv -ggdb3 
+CC=gcc
+run: kilo
+	./kilo
+
 kilo: kilo.c
-	$(CC) $(FLAGS) -o kilo kilo.c && ./kilo
+	$(CC) $(CFLAGS) -o $@ $<
+
+clean:
+	rm -rf kilo 
