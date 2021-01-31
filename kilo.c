@@ -32,6 +32,7 @@ enum editorKey{
 };
 
 /* DATA */
+
 typedef struct erow {
     int size;
     char * chars;
